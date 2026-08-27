@@ -26,14 +26,35 @@ Measured August 2026 via OpenRouter, one 7-turn run per style, with the
 simulated consultant and the leak judge pinned to one model so only the client
 varied. `make sim` reproduces it.
 
-| Model | s/turn | reasoning tokens | in role | escalates | tells | verdict |
-|---|---|---|---|---|---|---|
-| `google/gemini-2.5-flash-lite` | 1.5 | none | yes | to 4 | 0/5 | **the client** |
-| `google/gemini-3.1-flash-lite` | 1.2 | none | yes | to 4 | 0/5 | also fine, ~3x the cost |
-| `google/gemini-3.7-flash` | 5.6 | ~500/turn | yes | to 5 | 0/5 | **the assessor** |
-| `mistralai/mistral-small-3.2-24b` | 1.3 | none | **no** | **no** | 0/5 | fails both checks |
-| `openai/gpt-5-nano` | 11.3 | ~1000/turn | **no** | — | — | broke role on the first probe |
-| `z-ai/glm-5.3-flash` | 20.1 | ~470/turn | yes | — | — | too slow to finish a session |
+| Model | s/turn | reasoning | in role | escalates | tells | $/turn | verdict |
+|---|---|---|---|---|---|---|---|
+| `qwen/qwen3.7-flash` *reasoning off* | 1.4 | none | yes | to 3 | 0/5 | 0.00007 | cheapest that passes |
+| `google/gemini-2.5-flash-lite` | 1.5 | none | yes | to 4 | 0/5 | 0.00023 | **the default** |
+| `google/gemini-3.1-flash-lite` | 1.2 | none | yes | to 4 | 0/5 | 0.00069 | fine, no reason to prefer |
+| `google/gemini-3.7-flash` | 5.6 | ~500/turn | yes | to 5 | 0/5 | 0.00152 | **the assessor** |
+| `qwen/qwen3.7-flash` *default* | 11.5 | ~1300/turn | yes | — | — | 0.00024 | reasoning tax, no gain |
+| `mistralai/mistral-small-3.2-24b` | 1.3 | none | **no** | **no** | 0/5 | 0.00003 | fails both checks |
+| `openai/gpt-5-nano` | 11.3 | ~1000/turn | **no** | — | — | 0.00049 | broke role on the first probe |
+| `z-ai/glm-5.3-flash` | 20.1 | ~470/turn | yes | — | — | 0.00003 | too slow to finish a session |
+
+**Qwen 3.7 Flash is the cheapest thing that passes**, and by a distance —
+three times under the default and twenty times under the model this was built
+on. It needs `'reasoning' => ['enabled' => false]`; left at its default it
+spends about 1300 tokens thinking per turn and takes eleven seconds. Two reasons
+it is not the shipped default rather than one:
+
+- It depends on a provider flag being honoured. If that ever stops, cost and
+  latency jump roughly eightfold with nothing failing loudly. (An outright
+  refusal is handled — `llm.php` drops the field and retries — but silent
+  non-compliance is not detectable from the response.)
+- Requests routed through an aggregator may be served by any of several hosts,
+  which makes the data-processing story harder to state than a single vendor's.
+  That matters more here than usual, because the payload is a transcript of an
+  identifiable student reasoning aloud.
+
+Neither is a reason to avoid it. If the bill ever starts to matter, switch the
+client to it and leave the assessor alone; at this scale the difference is
+between one euro and two.
 
 Two things that decide it, neither of which is the headline price:
 

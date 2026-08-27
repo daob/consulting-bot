@@ -43,3 +43,40 @@ cc_llm_transport(fn() => [200, '{"error":{"message":"upstream is down"}}'], true
 throws(fn() => cc_llm_chat([['role' => 'user', 'content' => 'x']]), 'upstream is down', 'catches an error hidden in a 200');
 
 cc_llm_transport(null, true);
+
+group('reasoning passthrough');
+$sent = null;
+cc_llm_transport(function ($url, $payload, $headers) use (&$sent) {
+    $sent = $payload;
+    return [200, json_encode(['choices' => [['message' => ['content' => 'x'], 'finish_reason' => 'stop']], 'usage' => []])];
+}, true);
+
+cc_llm_chat([['role' => 'user', 'content' => 'x']]);
+ok(!array_key_exists('reasoning', $sent), 'nothing is sent when unconfigured');
+
+cc_llm_chat([['role' => 'user', 'content' => 'x']], ['reasoning' => ['enabled' => false]]);
+is_same($sent['reasoning'], ['enabled' => false], 'passed through verbatim when given');
+cc_llm_transport(null, true);
+
+group('reasoning is scoped, and a refusal does not lose the turn');
+$sent = null;
+cc_llm_transport(function ($url, $payload, $headers) use (&$sent) {
+    $sent = $payload;
+    return [200, json_encode(['choices' => [['message' => ['content' => 'x'], 'finish_reason' => 'stop']], 'usage' => []])];
+}, true);
+cc_llm_chat([['role' => 'user', 'content' => 'x']], ['reasoning' => null]);
+ok(!array_key_exists('reasoning', $sent), 'an explicit null means send nothing, not fall back to config');
+
+// A provider that refuses to disable reasoning: drop the field and retry.
+$seen = [];
+cc_llm_transport(function ($url, $payload, $headers) use (&$seen) {
+    $seen[] = array_key_exists('reasoning', $payload);
+    if (count($seen) === 1) {
+        return [400, '{"error":{"message":"Reasoning is mandatory for this endpoint and cannot be disabled."}}'];
+    }
+    return [200, json_encode(['choices' => [['message' => ['content' => 'recovered'], 'finish_reason' => 'stop']], 'usage' => []])];
+}, true);
+$r = cc_llm_chat([['role' => 'user', 'content' => 'x']], ['reasoning' => ['enabled' => false]]);
+is_same($r['content'], 'recovered', 'a mandatory-reasoning refusal is recovered from');
+is_same($seen, [true, false], 'the second attempt drops the field');
+cc_llm_transport(null, true);

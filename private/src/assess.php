@@ -113,6 +113,10 @@ function cc_assess(array $s, array $p): array
             // makes the chat model ~95% of the bill and the assessor almost
             // free, so they are worth choosing separately.
             'model'           => cc_config('model_assessor') ?: cc_config('model'),
+            // The client's reasoning setting is about the forty chat turns.
+            // The assessor runs once and its thinking is worth paying for, so
+            // it opts out of that setting unless told otherwise.
+            'reasoning'       => cc_config('reasoning_assessor'),
             'max_tokens'      => cc_config('max_tokens_assessor', 8000),
             'temperature'     => cc_config('temperature_assessor', 0.2),
             'response_format' => ['type' => 'json_object'],

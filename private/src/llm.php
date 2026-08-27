@@ -45,6 +45,20 @@ function cc_llm_chat(array $messages, array $opts = []): array
         $payload['response_format'] = $opts['response_format'];
     }
 
+    // Passed through verbatim when configured. Several models reason on every
+    // turn and bill the thinking as output; where the provider lets you switch
+    // that off it is the single biggest lever on both cost and latency.
+    // OpenRouter spells it ['enabled' => false]; others differ, which is why
+    // this is a passthrough rather than a boolean.
+    // array_key_exists, not ??: a caller passing null means "send nothing",
+    // which is different from "not specified, fall back to config".
+    $reasoning = array_key_exists('reasoning', $opts)
+        ? $opts['reasoning']
+        : cc_config('reasoning');
+    if ($reasoning !== null) {
+        $payload['reasoning'] = $reasoning;
+    }
+
     $headers = [
         'Content-Type: application/json',
         'Authorization: Bearer ' . $cfg['api_key'],
@@ -96,8 +110,18 @@ function cc_llm_chat(array $messages, array $opts = []): array
         } elseif ($status === 429 || $status >= 500) {
             $lastError = 'HTTP ' . $status;
         } else {
-            // 400/401/403 will not fix themselves.
             $detail = json_decode($body, true)['error']['message'] ?? substr($body, 0, 300);
+
+            // Some models cannot have reasoning switched off and reject the
+            // request outright. That is a configuration mismatch, not a reason
+            // to lose the turn: drop the field and try once more.
+            if (isset($payload['reasoning']) && stripos($detail, 'reasoning') !== false) {
+                unset($payload['reasoning']);
+                $lastError = 'model refuses to disable reasoning; retried without it';
+                continue;
+            }
+
+            // Everything else here - 400, 401, 403 - will not fix itself.
             throw new CcLlmError('HTTP ' . $status . ': ' . $detail);
         }
 

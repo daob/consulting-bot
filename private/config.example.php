@@ -18,6 +18,19 @@ return [
     // little and is where the quality matters most. null = use 'model'.
     'model_assessor' => 'google/gemini-3.7-flash',
 
+    // Passed straight through to the provider. Some models reason on every turn
+    // and charge the thinking as output tokens; switching it off, where the
+    // provider allows, cuts both the bill and the wait substantially.
+    // OpenRouter: ['enabled' => false]. null sends nothing.
+    //   qwen3.7-flash  honours it
+    //   gemini flash-lite  does not reason anyway
+    //   gemini-3.7-flash, glm-5.3-flash  refuse: reasoning is mandatory
+    'reasoning' => null,
+
+    // The same, for the single assessor call. Left null on purpose: that call
+    // runs once per session and is where reasoning actually earns its cost.
+    'reasoning_assessor' => null,
+
     // Sent by OpenRouter for attribution. Harmless elsewhere.
     'site_url'   => 'https://daob.nl/consult/',
     'site_title' => 'STADS consulting client',
