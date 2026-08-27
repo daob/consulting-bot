@@ -1,0 +1,38 @@
+# This directory is served from inside the WordPress document root, so it lives
+# alongside WordPress's own .htaccess. That is safe: WordPress only rewrites
+# requests that do not match a real file or directory, and every request here
+# matches one, so nothing reaches WordPress at all.
+
+# Force HTTPS. Hostnet has no panel switch for this.
+# REQUEST_URI rather than $1: inside a subdirectory $1 is the path relative to
+# this directory, so the naive version would send /consult/api.php to /api.php.
+# Both conditions are needed because TLS usually terminates upstream on shared
+# hosting, leaving %{HTTPS} reading "off" for a visitor who arrived over https.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# No directory listings. If the server returns 500 the moment you upload this,
+# the host does not allow Options in .htaccess: delete just this line.
+Options -Indexes
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "same-origin"
+</IfModule>
+
+# path.php is included by api.php, never requested directly. Written for both
+# Apache 2.4 and 2.2 so an old server cannot turn this into a 500.
+<Files "path.php">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</Files>

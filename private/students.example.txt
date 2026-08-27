@@ -1,0 +1,5 @@
+# One student number per line. Blank lines and lines starting with # are ignored.
+# Export the class list from Brightspace and take the OrgDefinedId column.
+# Rename this file to students.txt on the server.
+1234567
+7654321

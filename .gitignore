@@ -1,0 +1,25 @@
+# Secrets and personal data. Nothing here belongs in a repository.
+# NB: gitignore has no trailing comments — a pattern with one matches nothing.
+
+# the API key
+private/config.php
+# real student numbers
+private/students.txt
+# server hostname and paths
+deploy.env
+*.key
+# scratch corner: keys, notes, one-off scripts
+local/
+
+# Runtime state
+private/data/
+transcripts/
+shots/
+
+# Editor and OS noise
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
