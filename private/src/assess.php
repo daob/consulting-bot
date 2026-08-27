@@ -109,6 +109,10 @@ function cc_assess(array $s, array $p): array
             ['role' => 'user',   'content' => "TRANSCRIPT\n\n" . $transcript],
         ],
         [
+            // The client speaks forty times a session; the assessor once. That
+            // makes the chat model ~95% of the bill and the assessor almost
+            // free, so they are worth choosing separately.
+            'model'           => cc_config('model_assessor') ?: cc_config('model'),
             'max_tokens'      => cc_config('max_tokens_assessor', 8000),
             'temperature'     => cc_config('temperature_assessor', 0.2),
             'response_format' => ['type' => 'json_object'],

@@ -9,7 +9,14 @@ return [
     // later, change these three lines and nothing else.
     'api_base'  => 'https://openrouter.ai/api/v1',
     'api_key'   => 'sk-or-v1-REPLACE-ME',
-    'model'     => 'google/gemini-3.7-flash',
+    // Measured against the acceptance harness — see docs/configuration.md.
+    'model'     => 'google/gemini-2.5-flash-lite',
+
+    // Optional. The client speaks forty times a session and the assessor once,
+    // so the chat model is almost the whole bill. Running a cheap model for the
+    // conversation and a stronger one for the single assessment costs very
+    // little and is where the quality matters most. null = use 'model'.
+    'model_assessor' => 'google/gemini-3.7-flash',
 
     // Sent by OpenRouter for attribution. Harmless elsewhere.
     'site_url'   => 'https://daob.nl/consult/',

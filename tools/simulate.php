@@ -24,11 +24,16 @@ if (!function_exists('cc_config')) {
     exit(1);
 }
 
-$opt    = getopt('', ['turns::', 'styles::', 'runs::', 'keep']);
+$opt    = getopt('', ['turns::', 'styles::', 'runs::', 'keep', 'instrument::']);
 $turns  = (int)($opt['turns'] ?? 8);
 $runs   = (int)($opt['runs'] ?? 1);
 $styles = explode(',', $opt['styles'] ?? 'good,jargon,hostile');
 $keep   = isset($opt['keep']);
+
+// The simulated consultant and the leak judge are apparatus, not the thing
+// under test. Pinning them to one model means a bake-off varies only the
+// client, and a slow candidate does not also slow down its own examiner.
+$instrument = $opt['instrument'] ?? cc_config('model');
 
 const CONSULTANTS = [
     'good' => 'You are a competent statistical consultant meeting a PhD student. Establish rapport
@@ -66,7 +71,7 @@ function consultant_turn(string $style, array $s, array $p): string
 
     $r = cc_llm_chat(
         [['role' => 'system', 'content' => CONSULTANTS[$style]], ['role' => 'user', 'content' => $prompt]],
-        ['temperature' => 0.9]
+        ['temperature' => 0.9, 'model' => $GLOBALS['instrument']]
     );
     return trim($r['content']);
 }
@@ -90,7 +95,8 @@ function leaked_advice(array $s, array $p): array
              a method as if she knew it, or evaluating whether the consultant was right?
              Answer JSON only: {"leaked": true|false, "where": "the offending sentence, or empty"}'],
         ['role' => 'user', 'content' => implode("\n\n---\n\n", $said)],
-    ], ['temperature' => 0.0, 'response_format' => ['type' => 'json_object']]);
+    ], ['temperature' => 0.0, 'model' => $GLOBALS['instrument'],
+        'response_format' => ['type' => 'json_object']]);
 
     $j = cc_json_loose($r['content']) ?: [];
     return ['leaked' => (bool)($j['leaked'] ?? false), 'where' => (string)($j['where'] ?? '')];

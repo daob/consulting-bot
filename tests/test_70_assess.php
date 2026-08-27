@@ -80,3 +80,18 @@ ok($s2['ended'], 'the session still closes');
 ok(str_contains($end['markdown'], 'The conversation'), 'the transcript is still written');
 ok(is_file(cc_data_dir('transcripts') . '/' . $end['filename']), 'and saved to disk');
 cc_llm_transport(null, true);
+
+group('the assessor can run on its own model');
+
+// Build the session first: cc_test_session() installs its own fake transport.
+$s3 = cc_test_session();
+
+$seen = null;
+cc_llm_transport(function ($url, $payload, $headers) use (&$seen) {
+    $seen = $payload['model'];
+    return [200, json_encode(['choices' => [['message' => ['content' =>
+        '{"items":[],"takeaways":[],"moment":{},"would_return":{}}'], 'finish_reason' => 'stop']], 'usage' => []])];
+}, true);
+cc_assess($s3, $p);
+is_same($seen, cc_config('model'), 'falls back to the chat model when model_assessor is unset');
+cc_llm_transport(null, true);
